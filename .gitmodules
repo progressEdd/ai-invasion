@@ -1,0 +1,4 @@
+[submodule "01-dev-onboarding"]
+	path = 01-dev-onboarding
+	url = https://github.com/progressEdd/dev-onboarding.git
+	branch = master
