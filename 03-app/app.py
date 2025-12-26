@@ -427,5 +427,10 @@ def _(get_opening, get_premise, get_start, mo, set_opening, set_premise):
     return
 
 
+@app.cell
+def _():
+    return
+
+
 if __name__ == "__main__":
     app.run()
