@@ -2,7 +2,7 @@
 exploring making a local novel ai story writer
 
 ![ui](./00-supporting-files/images/README/20251226224448.png)
-![](./00-supporting-files/images/README/novelai-killer-demo.mp4)
+https://github.com/user-attachments/assets/3e325749-ec8d-4e4f-abcf-b0281beb9f5b
 
 # background
 I had chatgpt code up the front end and wrap up the code into structured outputs after seeing the [original thread ](https://forum.level1techs.com/t/bedhedds-ai-invasion/235812) for the idea
