@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.18.4"
-app = marimo.App(width="columns")
+app = marimo.App(width="columns", layout_file="layouts/app.grid.json")
 
 
 @app.cell
@@ -210,9 +210,14 @@ def _(available_models: list[str], mo):
             label="Model",
             searchable=True,
         )
-
     mo.vstack([model_dropdown] if model_dropdown is not None else [custom_model])
     return (model_dropdown,)
+
+
+@app.cell
+def _(model_dropdown):
+    llm_model = model_dropdown.value
+    return (llm_model,)
 
 
 @app.cell
@@ -257,13 +262,13 @@ def _():
         You are a sharp, imaginative fiction writer.
 
         Task:
-        - Produce (1) a concise, compelling story premise and (2) the opening paragraph that launches the story.
+        - Produce (1) a concise, compelling _story _premise and (2) the opening paragraph that launches the _story.
 
         Rules:
         - If the user provides ideas, weave them in organically (don’t just repeat them).
         - If the user provides no ideas, invent something fresh with a surprising combination of
           genre, setting, protagonist, conflict, and twist.
-        - Premise: 2–5 sentences, stakes + hook, no spoilers.
+        - _premise: 2–5 sentences, stakes + hook, no spoilers.
         - Opening paragraph: 120–180 words, vivid and concrete, minimal clichés, clear POV,
           grounded scene, ends with a soft hook.
         - Tone should follow user preferences; default to PG-13 if none are given.
@@ -281,11 +286,11 @@ def _():
         You are a skilled novelist. Write the next paragraph only.
 
         Inputs:
-        - You will be given the story premise and the story-so-far (either the opening paragraph + latest paragraph,
+        - You will be given the _story _premise and the _story-so-far (either the opening paragraph + latest paragraph,
           or a compact analysis summary). Use them to preserve continuity.
 
         Rules:
-        - Output exactly one paragraph of story prose (no headings, no bullets, no analysis).
+        - Output exactly one paragraph of _story prose (no headings, no bullets, no analysis).
         - Preserve continuity: characters, tone, POV, tense, world rules.
         - Length target: ~120–200 words unless told otherwise.
         - Concrete detail, strong verbs, show > tell; minimal clichés.
@@ -299,14 +304,14 @@ def _():
 
     class StoryAnalysis(BaseModel):
         """
-        You are a story analyst. Produce a succinct “Story-So-Far” handoff so another model can write
-        the next paragraph without breaking continuity. Do not write new story prose.
+        You are a _story analyst. Produce a succinct “_story-So-Far” handoff so another model can write
+        the next paragraph without breaking continuity. Do not write new _story prose.
 
         Inputs:
-        - You will be given the story premise and the story text so far (opening paragraph + one or more continuation paragraphs).
+        - You will be given the _story _premise and the _story text so far (opening paragraph + one or more continuation paragraphs).
 
         Rules:
-        - Extract ground truth only from the provided text/premise. No inventions.
+        - Extract ground truth only from the provided text/_premise. No inventions.
         - Capture continuity anchors: cast, goals, stakes, conflicts, setting rules, POV/tense,
           tone/style markers, motifs, and notable objects.
         - Map causality and current situation.
@@ -325,33 +330,44 @@ def _():
         continuity_landmines: List[str] = Field(default_factory=list)
         ambiguities: List[str] = Field(default_factory=list)
         next_paragraph_seeds: List[str] = Field(..., min_length=3, max_length=5, description="Beats-only options, no prose.")
-    return (StoryStart,)
+    return StoryAnalysis, StoryContinue, StoryStart
 
 
 @app.cell
 def _(mo):
-    get_start, set_start = mo.state(None)
-    get_start_err, set_start_err = mo.state("")
+    # --- CELL: _story state (define once; if you already have any of these, don't redefine) ---
 
-    get_premise, set_premise = mo.state("")
-    get_opening, set_opening = mo.state("")
+    get_start, set_start = mo.state(None)            # storyStart | None
+    get_start_err, set_start_err = mo.state("")      # str
+
+    get_premise, set_premise = mo.state("")          # str
+    get_opening, set_opening = mo.state("")          # str
+
+    get_story_text, set_story_text = mo.state("")    # approved full _story text
+    get_draft_next, set_draft_next = mo.state("")    # draft paragraph being edited
+    get_analysis, set_analysis = mo.state(None)      # _storyAnalysis | None
     return (
+        get_analysis,
+        get_draft_next,
         get_opening,
         get_premise,
-        get_start,
         get_start_err,
+        get_story_text,
+        set_analysis,
+        set_draft_next,
         set_opening,
         set_premise,
         set_start,
         set_start_err,
+        set_story_text,
     )
 
 
 @app.cell
 def _(mo):
     prompt_form = mo.ui.text_area(
-        label="Staring premise",
-        placeholder="Enter an idea for a story… for example: I'm feeling lucky suggest me a premise",
+        label="Staring premise \n\n for example: I'm feeling lucky suggest me a premise",
+        placeholder="Enter an idea for a story…",
         rows=4,
         full_width=True,
     ).form(submit_button_label="Start")
@@ -365,19 +381,22 @@ def _(
     StoryStart,
     get_start_err,
     llm_client,
+    llm_model,
     mo,
-    model_dropdown,
     parse_structured,
     prompt_form,
+    set_analysis,
+    set_draft_next,
     set_opening,
     set_premise,
     set_start,
     set_start_err,
+    set_story_text,
 ):
+    # --- CELL: run Start (button submit from prompt_form) ---
     user_prompt = (prompt_form.value or "").strip()
-    status_ui = mo.md("")
-    llm_model = model_dropdown.value
 
+    status_ui = mo.md("")
     if user_prompt:
         try:
             set_start_err("")
@@ -388,9 +407,18 @@ def _(
                 user_content=user_prompt,
                 temperature=2,
             )
+
             set_start(_start)
-            set_premise(_start.premise or "")
-            set_opening(_start.opening_paragraph or "")
+            set_premise((_start.premise or "").strip())
+            set_opening((_start.opening_paragraph or "").strip())
+
+            # seed _story body with opening
+            set_story_text((_start.opening_paragraph or "").strip())
+
+            # reset downstream
+            set_draft_next("")
+            set_analysis(None)
+
             status_ui = mo.md("Generated start.")
         except Exception as e:
             set_start_err(f"{type(e).__name__}: {e}")
@@ -401,29 +429,187 @@ def _(
 
 
 @app.cell
-def _(get_opening, get_premise, get_start, mo, set_opening, set_premise):
-    start_obj = get_start()
+def _(mo):
+    generate_next_btn = mo.ui.run_button(label="Generate next paragraph")
+    append_btn = mo.ui.run_button(label="Append to story")
+    discard_btn = mo.ui.run_button(label="Discard draft")
+    return append_btn, discard_btn, generate_next_btn
 
-    if start_obj is None:
-        editors_ui = mo.md("")
-    else:
-        premise_edit = mo.ui.text_area(
-            value=get_premise(),
-            on_change=set_premise,
-            label="Premise",
-            rows=4,
-            full_width=True,
-        )
-        opening_edit = mo.ui.text_area(
-            value=get_opening(),
-            on_change=set_opening,
-            label="Opening paragraph",
-            rows=10,
-            full_width=True,
-        )
-        editors_ui = mo.vstack([premise_edit, opening_edit]).style(width="100%")
 
-    editors_ui
+@app.cell
+def _(
+    append_btn,
+    discard_btn,
+    generate_next_btn,
+    get_analysis,
+    get_draft_next,
+    get_premise,
+    get_story_text,
+    mo,
+    set_draft_next,
+    set_story_text,
+):
+    premise_md = mo.md(f"**Premise:** {get_premise() or ''}")
+
+    story_body = mo.ui.text_area(
+        value=get_story_text(),
+        on_change=set_story_text,
+        label="Story",
+        rows=32,
+        full_width=True,
+    )
+
+    draft_editor = mo.ui.text_area(
+        value=get_draft_next(),
+        on_change=set_draft_next,
+        label="Next paragraph (draft)",
+        rows=10,
+        full_width=True,
+    )
+
+    _analysis_obj = get_analysis()
+    analysis_preview = (
+        mo.md(f"```json\n{_analysis_obj.model_dump_json(indent=2)}\n```")
+        if _analysis_obj is not None
+        else mo.md("")
+    )
+
+    right_panel = mo.vstack(
+        [
+            mo.md("### Controls"),
+            generate_next_btn,
+            mo.hstack([append_btn, discard_btn]),
+            draft_editor if (get_draft_next() or "").strip() else mo.md(""),
+            analysis_preview if _analysis_obj is not None else mo.md(""),
+        ]
+    ).style(width="380px")
+
+    mo.hstack(
+        [mo.vstack([premise_md, story_body]).style(flex="1"), right_panel]
+    ).style(width="100%", gap="16px", align_items="flex-start")
+
+    return draft_editor, story_body
+
+
+@app.cell
+def _(StoryAnalysis, StoryContinue, parse_structured):
+    from dataclasses import dataclass
+    # from typing import Optional
+
+    @dataclass
+    class CycleResult:
+        draft_next: str
+        analysis: StoryAnalysis
+
+    def run_cycle(
+        client,
+        *,
+        model: str,
+        premise: str,
+        story_text: str,              # approved full story so far
+        temperature_continue: float = 0.2,
+        temperature_analyze: float = 0.2,
+    ) -> CycleResult:
+        # 3) Analyze (premise + approved story text)
+        analysis_input = f"Premise:\n{premise}\n\nStory text:\n{story_text}"
+        analysis = parse_structured(
+            client,
+            model=model,
+            schema=StoryAnalysis,
+            user_content=analysis_input,
+            temperature=temperature_analyze,
+        )
+
+        # 4) Continue again (use analysis summary)
+        cont2_input = (
+            f"Premise:\n{premise}\n\n"
+            f"Story analysis summary:\n{analysis.model_dump_json(indent=2)}\n\n"
+            "Write the next paragraph."
+        )
+        cont2 = parse_structured(
+            client,
+            model=model,
+            schema=StoryContinue,
+            user_content=cont2_input,
+            temperature=temperature_continue,
+        )
+
+        return CycleResult(draft_next=(cont2.next_paragraph or "").strip(), analysis=analysis)
+    return (run_cycle,)
+
+
+@app.cell
+def _(
+    generate_next_btn,
+    get_opening,
+    get_premise,
+    get_story_text,
+    llm_client,
+    llm_model,
+    mo,
+    run_cycle,
+    set_analysis,
+    set_draft_next,
+    set_story_text,
+):
+    # run when clicked
+    mo.stop(not generate_next_btn.value)  # run_button pattern :contentReference[oaicite:2]{index=2}
+
+    _premise = (get_premise() or "").strip()
+    mo.stop(not _premise)
+
+    _story = (get_story_text() or "").strip()
+    if not _story:
+        _opening = (get_opening() or "").strip()
+        if _opening:
+            _story = _opening
+            set_story_text(_opening)
+
+    # If you want to use your orchestration:
+    res = run_cycle(
+        llm_client,
+        model=llm_model,
+        premise=_premise,
+        story_text=_story,
+    )
+
+    set_analysis(res.analysis)
+    set_draft_next(res.draft_next)
+
+    mo.md("")
+    return
+
+
+@app.cell
+def _(
+    append_btn,
+    discard_btn,
+    draft_editor,
+    mo,
+    set_draft_next,
+    set_story_text,
+    story_body,
+):
+
+    if discard_btn.value:
+        set_draft_next("")
+
+    mo.stop(not append_btn.value)
+
+    _current_story = (story_body.value or "").strip()
+    _current_draft = (draft_editor.value or "").strip()
+
+    if _current_draft:
+        set_story_text(f"{_current_story}\n\n{_current_draft}" if _current_story else _current_draft)
+        set_draft_next("")
+
+    mo.md("")
+    return
+
+
+@app.cell
+def _(get_analysis):
+    get_analysis()
     return
 
 
