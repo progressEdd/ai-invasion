@@ -487,7 +487,6 @@ def _(
     mo.hstack(
         [mo.vstack([premise_md, story_body]).style(flex="1"), right_panel]
     ).style(width="100%", gap="16px", align_items="flex-start")
-
     return draft_editor, story_body
 
 
