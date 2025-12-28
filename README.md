@@ -6,7 +6,7 @@ exploring making a local novel ai story writer
 <video width="1920" height="1080" src="https://github.com/user-attachments/assets/3e325749-ec8d-4e4f-abcf-b0281beb9f5b"></video>
 
 # background
-I had chatgpt code up the front end and wrap up the code into structured outputs after seeing the [original thread ](https://forum.level1techs.com/t/bedhedds-ai-invasion/235812) for the idea
+I had chatgpt code up the front end and wrap up the code into structured outputs after seeing the [original thread](https://forum.level1techs.com/t/bedhedds-ai-invasion/235812) for the idea
 
 > DougDoug makes interesting and entertaining videos, a series I like is his AI invasion Series with twitch chat.
 > For reference here is [a playlist of the series](https://youtube.com/playlist?list=PLzY2D6XUB8KfzQbQBRV2KVxrRJ3kO1Bwo&si=uh6k-siNpcEZMxbi)
