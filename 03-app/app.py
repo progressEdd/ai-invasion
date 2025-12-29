@@ -9,7 +9,7 @@ def _():
     import marimo as mo
 
     llm_backend = mo.ui.radio(
-        options=["ollama", "llamacpp", "openai", "azure"],
+        options=["llamacpp", "lmstudio", "ollama", "openai", "azure"],
         value="ollama",
         label="LLM backend",
     )
@@ -20,16 +20,22 @@ def _():
 
 @app.cell
 def _(mo):
-    ollama_form = (
-        mo.md("**Ollama**\n\nHost: {host}")
-        .batch(host=mo.ui.text(value="http://localhost:11434", label="Host"))
-        .form(label="Ollama settings", submit_button_label="Apply")
-    )
-
     llamacpp_form = (
         mo.md("**llama.cpp**\n\nBase URL: {base_url}")
         .batch(base_url=mo.ui.text(value="http://localhost:8080/v1", label="base_url"))
         .form(label="llama.cpp settings", submit_button_label="Apply")
+    )
+
+    lmstudio_form = (
+        mo.md("**LM Studio**\n\nBase URL: {base_url}")
+        .batch(base_url=mo.ui.text(value="http://localhost:1234/v1", label="base_url"))
+        .form(label="LM Studio settings", submit_button_label="Apply")
+    )
+
+    ollama_form = (
+        mo.md("**Ollama**\n\nHost: {host}")
+        .batch(host=mo.ui.text(value="http://localhost:11434", label="Host"))
+        .form(label="Ollama settings", submit_button_label="Apply")
     )
 
     openai_form = (
@@ -56,11 +62,19 @@ def _(mo):
     )
 
     refresh_models = mo.ui.button(label="Refresh models")
-    return azure_form, llamacpp_form, ollama_form, openai_form
+    return azure_form, llamacpp_form, lmstudio_form, ollama_form, openai_form
 
 
 @app.cell
-def _(azure_form, llamacpp_form, llm_backend, mo, ollama_form, openai_form):
+def _(
+    azure_form,
+    llamacpp_form,
+    llm_backend,
+    lmstudio_form,
+    mo,
+    ollama_form,
+    openai_form,
+):
     # --- CELL 3: build client + discover models ---
     from typing import Any, Iterable
     import os
@@ -143,7 +157,19 @@ def _(azure_form, llamacpp_form, llm_backend, mo, ollama_form, openai_form):
 
     backend = llm_backend.value
 
-    if backend == "ollama":
+    if backend == "llamacpp":
+        cfg = llamacpp_form.value or {}
+        base_url = _normalize_base_url(cfg.get("base_url") or "http://localhost:8080/v1")
+        llm_client = OpenAI(base_url=base_url, api_key="sk-no-key-required")
+        available_models, model_source_error = _try_client_models_list(llm_client)
+
+    elif backend == "lmstudio":
+        cfg = lmstudio_form.value or {}
+        base_url = _normalize_base_url(cfg.get("base_url") or "http://localhost:1234/v1")
+        llm_client = OpenAI(base_url=base_url, api_key="lm-studio")  # key required by SDK, ignored by LM Studio
+        available_models, model_source_error = _try_client_models_list(llm_client)
+
+    elif backend == "ollama":
         cfg = ollama_form.value or {}
         host = (cfg.get("host") or "").strip() or "http://localhost:11434"
         base_url = _normalize_base_url(host)  # host -> host/v1
@@ -151,12 +177,6 @@ def _(azure_form, llamacpp_form, llm_backend, mo, ollama_form, openai_form):
 
         # Your requested listing method:
         available_models, model_source_error = _try_ollama_list_models(host)
-
-    elif backend == "llamacpp":
-        cfg = llamacpp_form.value or {}
-        base_url = _normalize_base_url(cfg.get("base_url") or "http://localhost:8080/v1")
-        llm_client = OpenAI(base_url=base_url, api_key="sk-no-key-required")
-        available_models, model_source_error = _try_client_models_list(llm_client)
 
     elif backend == "openai":
         cfg = openai_form.value or {}
