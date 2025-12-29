@@ -55,15 +55,16 @@
         "position": null
       },
       {
+        "position": null
+      },
+      {
         "position": [
           0,
           15,
           24,
-          42
-        ]
-      },
-      {
-        "position": null
+          66
+        ],
+        "scrollable": true
       },
       {
         "position": null

@@ -359,6 +359,7 @@ def _(mo):
 
     get_start, set_start = mo.state(None)            # storyStart | None
     get_start_err, set_start_err = mo.state("")      # str
+    get_prompt, set_prompt = mo.state("")  # starting premise text
 
     get_premise, set_premise = mo.state("")          # str
     get_opening, set_opening = mo.state("")          # str
@@ -371,12 +372,14 @@ def _(mo):
         get_draft_next,
         get_opening,
         get_premise,
+        get_prompt,
         get_start_err,
         get_story_text,
         set_analysis,
         set_draft_next,
         set_opening,
         set_premise,
+        set_prompt,
         set_start,
         set_start_err,
         set_story_text,
@@ -384,27 +387,50 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
+def _(get_prompt, mo, set_prompt):
     prompt_form = mo.ui.text_area(
-        label="Staring premise \n\n for example: I'm feeling lucky suggest me a premise",
+        value=get_prompt(),
+        on_change=set_prompt,
+        label="Starting premise",
         placeholder="Enter an idea for a story…",
         rows=4,
         full_width=True,
-    ).form(submit_button_label="Start")
+    )
 
-    prompt_form
-    return (prompt_form,)
+    lucky_btn = mo.ui.run_button(label="I'm feeling lucky")
+    start_btn = mo.ui.run_button(label="Start")
+
+    mo.vstack(
+        [
+            prompt_form,
+            mo.hstack(
+                [lucky_btn, mo.vstack([start_btn]).style({"marginLeft": "auto"})],
+                gap=12,
+            ).style({"width": "100%", "alignItems": "center"}),
+        ],
+        gap=8,
+    )
+
+    return lucky_btn, start_btn
+
+
+@app.cell
+def _(lucky_btn, mo, set_prompt):
+    mo.stop(not lucky_btn.value)
+    set_prompt("I'm feeling lucky — suggest me a premise")
+    mo.md("")
+    return
 
 
 @app.cell
 def _(
     StoryStart,
+    get_prompt,
     get_start_err,
     llm_client,
     llm_model,
     mo,
     parse_structured,
-    prompt_form,
     set_analysis,
     set_draft_next,
     set_opening,
@@ -412,9 +438,10 @@ def _(
     set_start,
     set_start_err,
     set_story_text,
+    start_btn,
 ):
-    # --- CELL: run Start (button submit from prompt_form) ---
-    user_prompt = (prompt_form.value or "").strip()
+    mo.stop(not start_btn.value)
+    user_prompt = (get_prompt() or "").strip()
 
     status_ui = mo.md("")
     if user_prompt:
@@ -469,44 +496,81 @@ def _(
     set_draft_next,
     set_story_text,
 ):
-    premise_md = mo.md(f"**Premise:** {get_premise() or ''}")
+    premise_md = mo.md(f"**Premise:** {get_premise() or ''}").style(
+        {"margin": "0", "padding": "0", "lineHeight": "1.1"}
+    )
+
+    controls_row = mo.hstack(
+        [generate_next_btn, append_btn, discard_btn],
+        gap=8,
+    ).style(
+        {
+            "width": "100%",
+            "flexWrap": "wrap",
+            "justifyContent": "flex-start",
+            "alignItems": "center",
+            "margin": "0",
+            "padding": "0",
+            "marginTop": "-6px",  # pull buttons up (tune -4px .. -10px)
+        }
+    )
+
+    header = mo.vstack([premise_md, controls_row], gap=0).style(
+        {"width": "100%", "margin": "0", "padding": "0"}
+    )
 
     story_body = mo.ui.text_area(
         value=get_story_text(),
         on_change=set_story_text,
         label="Story",
-        rows=32,
+        rows=20,          # rows becomes less important
         full_width=True,
-    )
+    ).style({"margin": "0", "padding": "0", "flex": "0.8", "minHeight": "0"})
 
     draft_editor = mo.ui.text_area(
         value=get_draft_next(),
         on_change=set_draft_next,
         label="Next paragraph (draft)",
-        rows=10,
+        rows=8,
         full_width=True,
-    )
+    ).style({"margin": "0", "padding": "0"})
 
     _analysis_obj = get_analysis()
     analysis_preview = (
-        mo.md(f"```json\n{_analysis_obj.model_dump_json(indent=2)}\n```")
+        mo.md(f"```json\n{_analysis_obj.model_dump_json(indent=2)}\n```").style(
+            {"margin": "0", "padding": "0", "lineHeight": "1.1"}
+        )
         if _analysis_obj is not None
         else mo.md("")
     )
 
-    right_panel = mo.vstack(
+    bottom_block = mo.vstack(
         [
-            mo.md("### Controls"),
-            generate_next_btn,
-            mo.hstack([append_btn, discard_btn]),
             draft_editor if (get_draft_next() or "").strip() else mo.md(""),
             analysis_preview if _analysis_obj is not None else mo.md(""),
-        ]
-    ).style(width="380px")
+        ],
+        gap=0,  # tight spacing between draft + analysis
+    ).style({"margin": "0", "padding": "0", "width": "100%"})
 
-    mo.hstack(
-        [mo.vstack([premise_md, story_body]).style(flex="1"), right_panel]
-    ).style(width="100%", gap="16px", align_items="flex-start")
+    mo.vstack(
+        [
+            header,
+            story_body,
+            bottom_block,
+        ],
+        gap=0,  # tighter overall spacing
+    ).style(
+        {
+            "width": "100%",
+            "height": "100vh",   # fill viewport
+            "display": "flex",
+            "flexDirection": "column",
+            "margin": "0",
+            "padding": "0",
+            "minHeight": "0",
+        }
+    )
+
     return draft_editor, story_body
 
 
@@ -623,12 +687,6 @@ def _(
         set_draft_next("")
 
     mo.md("")
-    return
-
-
-@app.cell
-def _(get_analysis):
-    get_analysis()
     return
 
 
