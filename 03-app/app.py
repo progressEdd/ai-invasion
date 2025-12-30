@@ -211,34 +211,145 @@ def _(
             mo.md(f"**Model discovery error:** `{model_source_error}`") if model_source_error else mo.md(""),
         ]
     )
-    return available_models, llm_client
+    return available_models, backend, llm_client
 
 
 @app.cell
-def _(available_models: list[str], mo):
-    # --- CELL 4A: create widgets (no .value access) ---
-    custom_model = mo.ui.text(
-        label="Custom model/deployment",
-        placeholder="e.g., gemma3:12b-it-q8_0 | qwen3:30b-a3b-instruct-2507-q4_K_M | gpt-4o-mini",
+def _(mo):
+    # CELL 4A
+    MODEL_PLACEHOLDER = "— Select a model —"
+
+    get_model, set_model = mo.state(MODEL_PLACEHOLDER)
+    get_model_tick, set_model_tick = mo.state(0)
+
+    return (
+        MODEL_PLACEHOLDER,
+        get_model,
+        get_model_tick,
+        set_model,
+        set_model_tick,
     )
 
-    model_dropdown = None
+
+@app.cell
+def _(
+    MODEL_PLACEHOLDER,
+    available_models: list[str],
+    get_model,
+    mo,
+    set_model,
+    set_model_tick,
+):
+    # CELL 4B: create selector UI (no .value access)
+    def _on_model_change(v: str):
+        set_model(v)
+        set_model_tick(lambda t: t + 1)  # user-driven signal only
+
+    current = (get_model() or MODEL_PLACEHOLDER)
+
     if available_models:
-        model_dropdown = mo.ui.dropdown(
-            options=available_models,
-            value=available_models[0],
+        options = [MODEL_PLACEHOLDER] + list(available_models)
+        if current not in options:
+            set_model(MODEL_PLACEHOLDER)  # keep blank-ish selection; don't auto-pick a model
+            current = MODEL_PLACEHOLDER
+
+        selector_ui = mo.ui.dropdown(
+            options=options,
+            value=current,          # must be in options
             label="Model",
             searchable=True,
+            on_change=_on_model_change,
         )
-    mo.vstack([model_dropdown] if model_dropdown is not None else [custom_model])
-    return (model_dropdown,)
+    else:
+        selector_ui = mo.ui.text(
+            label="Custom model/deployment",
+            placeholder="e.g., gemma3:12b-it-q8_0 | qwen3:30b-a3b-instruct-2507-q4_K_M | gpt-4o-mini",
+            value="" if current == MODEL_PLACEHOLDER else current,
+            on_change=_on_model_change,
+        )
+
+    mo.vstack([selector_ui])
+    return
 
 
 @app.cell
-def _(model_dropdown):
-    llm_model = model_dropdown.value
+def _(MODEL_PLACEHOLDER, get_model):
+    # CELL 4C: derive llm_model (safe to use anywhere)
+
+    v = (get_model() or "").strip()
+    llm_model = "" if (v == MODEL_PLACEHOLDER) else v
     llm_model
     return (llm_model,)
+
+
+@app.cell
+def _(backend, get_model_tick, llm_client, llm_model, mo):
+    # CELL 4D Warmup (progress bar + live elapsed, without spamming increments)
+    import time
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+    get_last_warm_tick, set_last_warm_tick = mo.state(0)
+
+    mo.stop(not llm_model)
+    mo.stop(backend not in {"ollama", "llamacpp", "lmstudio"})
+    mo.stop(llm_client is None)
+
+    tick = get_model_tick()
+    mo.stop(tick <= get_last_warm_tick())
+
+    def warm_up_model(client, model: str) -> tuple[bool, str]:
+        t0 = time.time()
+        try:
+            client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a helper."},
+                    {"role": "user", "content": "hi"},
+                ],
+                temperature=0,
+                max_tokens=1,
+            )
+            return True, f"{time.time() - t0:.2f}s"
+        except Exception as e:
+            return False, f"{type(e).__name__}: {e}"
+
+    start = time.time()
+
+    with mo.status.progress_bar(
+        total=1,
+        title="Warming up model",
+        subtitle=f"{backend} · {llm_model} · 0.0s elapsed",
+        show_eta=False,
+        show_rate=False,
+        remove_on_exit=True,
+    ) as bar:
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            fut = ex.submit(warm_up_model, llm_client, llm_model)
+
+            while True:
+                try:
+                    ok, info = fut.result(timeout=0.2)
+                    break
+                except FuturesTimeout:
+                    elapsed = time.time() - start
+                    # IMPORTANT: don't increment progress during polling
+                    bar.update(increment=0, subtitle=f"{backend} · {llm_model} · {elapsed:.1f}s elapsed")
+
+        total_elapsed = time.time() - start
+        bar.update(
+            increment=1,
+            title="Warm-up complete" if ok else "Warm-up failed",
+            subtitle=f"{info} (total {total_elapsed:.2f}s)",
+        )
+
+    set_last_warm_tick(tick)
+
+    mo.md(
+        f"**Warmup ({backend} / {llm_model}):** {'✅' if ok else '❌'} {info} "
+        f"(total: {total_elapsed:.2f}s)"
+    )
+
+    return
 
 
 @app.cell
@@ -576,7 +687,6 @@ def _(
     )
 
     page_css
-
     return draft_editor, story_body
 
 
@@ -672,11 +782,6 @@ def _(
 @app.cell
 def _(story_body):
     story_body.value
-    return
-
-
-@app.cell
-def _():
     return
 
 
