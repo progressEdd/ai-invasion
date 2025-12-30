@@ -1,11 +1,17 @@
 # ai-invasion
 exploring making a local novel ai story writer
 
-![ui](./00-supporting-files/images/README/20251226224448.png)
+![ui](00-supporting-files/images/README/20251230012609.png)
+## Demos
+### Feeling lucky?
+[feeling-lucky-gemma-2025-12-30_03-49-41.10mb.webm](https://github.com/user-attachments/assets/967cce72-893d-47b9-ae3c-35c158e2c794)
 
-<video width="1920" height="1080" src="https://github.com/user-attachments/assets/3e325749-ec8d-4e4f-abcf-b0281beb9f5b"></video>
+### Long demos
+[novel-ai-gemma-12b-2025-12-30_04-04-40.10mb.webm](https://github.com/user-attachments/assets/ab2a7194-6592-48be-b9c8-fe2c6bbf9265)
 
-# background
+[novel-ai-ministral-14b-2025-12-30_04-14-14.10mb.webm](https://github.com/user-attachments/assets/cb2af3aa-b1d4-402b-ac10-59f2f9790b53)
+
+# Background
 I had chatgpt code up the front end and wrap up the code into structured outputs after seeing the [original thread](https://forum.level1techs.com/t/bedhedds-ai-invasion/235812) for the idea
 
 > DougDoug makes interesting and entertaining videos, a series I like is his AI invasion Series with twitch chat.
@@ -14,7 +20,7 @@ I had chatgpt code up the front end and wrap up the code into structured outputs
 
 These are some experiments and prompts I made with chatgpt
 
-# building this project
+# Building this project
 To run the exploration notebook, make sure to install python with UV and ollama. When building your environment, make sure to install the dependencies (ollama, openai, etc) from the [pyproject.toml](./pyproject.toml) file
 
 With your dependencies installed, run
