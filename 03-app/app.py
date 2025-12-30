@@ -1,11 +1,7 @@
 import marimo
 
 __generated_with = "0.18.4"
-app = marimo.App(
-    width="columns",
-    layout_file="layouts/app.grid.json",
-    # css_file="custom.css",    
-)
+app = marimo.App(width="columns", layout_file="layouts/app.grid.json")
 
 
 @app.cell
@@ -241,6 +237,7 @@ def _(available_models: list[str], mo):
 @app.cell
 def _(model_dropdown):
     llm_model = model_dropdown.value
+    llm_model
     return (llm_model,)
 
 
@@ -292,7 +289,7 @@ def _():
         - If the user provides ideas, weave them in organically (don’t just repeat them).
         - If the user provides no ideas, invent something fresh with a surprising combination of
           genre, setting, protagonist, conflict, and twist.
-        - _premise: 2–5 sentences, stakes + hook, no spoilers.
+        - premise: 2–5 sentences, stakes + hook, no spoilers.
         - Opening paragraph: 120–180 words, vivid and concrete, minimal clichés, clear POV,
           grounded scene, ends with a soft hook.
         - Tone should follow user preferences; default to PG-13 if none are given.
@@ -426,6 +423,12 @@ def _(lucky_btn, mo, set_prompt):
 
 
 @app.cell
+def _(user_prompt):
+    user_prompt
+    return
+
+
+@app.cell
 def _(
     StoryStart,
     get_prompt,
@@ -444,7 +447,7 @@ def _(
     start_btn,
 ):
     mo.stop(not start_btn.value)
-    user_prompt = (get_prompt() or "").strip()
+    user_prompt = "This is the premise given by the user: " + (get_prompt() or "").strip()
 
     status_ui = mo.md("")
     if user_prompt:
@@ -469,13 +472,13 @@ def _(
             set_draft_next("")
             set_analysis(None)
 
-            status_ui = mo.md("Generated start.")
+            status_ui = mo.md(f"Generated start, prompt sent to model: \n\n {user_prompt}")
         except Exception as e:
             set_start_err(f"{type(e).__name__}: {e}")
             status_ui = mo.md(f"**Error:** `{get_start_err()}`")
 
     status_ui
-    return
+    return (user_prompt,)
 
 
 @app.cell
@@ -499,14 +502,11 @@ def _(
     set_draft_next,
     set_story_text,
 ):
-    premise_md = mo.md(f"**Premise:** {get_premise() or ''}").style(
-        {"margin": "0", "padding": "0", "lineHeight": "0"}
-    )
+    premise_md = mo.md(f"**Premise:** {get_premise() or ''}")
+    premise_md_css = premise_md.style({"margin": "0", "padding": "0", "lineHeight": "0"})
 
-    controls_row = mo.hstack(
-        [generate_next_btn, append_btn, discard_btn],
-        gap=10,
-    ).style(
+    controls_row = mo.hstack([generate_next_btn, append_btn, discard_btn], gap=10)
+    controls_row_css = controls_row.style(
         {
             "width": "100%",
             "flexWrap": "wrap",
@@ -514,21 +514,25 @@ def _(
             "alignItems": "center",
             "margin": "0",
             "padding": "0",
-            "marginTop": "-8px",  # pull buttons up (tune -4px .. -10px)
+            "marginTop": "-8px",
         }
     )
 
-    header = mo.vstack([premise_md, controls_row], gap=1).style(
-        {"width": "100%", "margin": "0", "padding": "0"}
-    )
+    header = mo.vstack([premise_md_css, controls_row_css], gap=1)
+    header_css = header.style({"width": "100%", "margin": "0", "padding": "0"})
 
+
+    # widgets stay as the main variables
     story_body = mo.ui.text_area(
         value=get_story_text(),
         on_change=set_story_text,
         label="Story",
-        rows=25,          # rows becomes less important, try to sync up the row to the min height as that will scale the text box to the whitespace to the next element
+        rows=25,
         full_width=True,
-    ).style({"margin": "0", "padding": "1", "flex": "1 1 auto", "minHeight": "25"})
+    )
+    story_body_css = story_body.style(
+        {"margin": "0", "padding": "1", "flex": "1 1 auto", "minHeight": "25"}
+    )
 
     draft_editor = mo.ui.text_area(
         value=get_draft_next(),
@@ -536,36 +540,33 @@ def _(
         label="Next paragraph (draft)",
         rows=13,
         full_width=True,
-    ).style({"margin": "0", "padding": "0"})
+    )
+    draft_editor_css = draft_editor.style({"margin": "0", "padding": "0"})
+
 
     _analysis_obj = get_analysis()
     analysis_preview = (
-        mo.md(f"```json\n{_analysis_obj.model_dump_json(indent=2)}\n```").style(
-            {"margin": "0", "padding": "0", "lineHeight": "1.1"}
-        )
+        mo.md(f"```json\n{_analysis_obj.model_dump_json(indent=2)}\n```")
         if _analysis_obj is not None
         else mo.md("")
     )
+    analysis_preview_css = analysis_preview.style({"margin": "0", "padding": "0", "lineHeight": "1.1"})
 
     bottom_block = mo.vstack(
         [
-            draft_editor if (get_draft_next() or "").strip() else mo.md(""),
-            analysis_preview if _analysis_obj is not None else mo.md(""),
+            draft_editor_css if (get_draft_next() or "").strip() else mo.md(""),
+            analysis_preview_css if _analysis_obj is not None else mo.md(""),
         ],
-        gap=0,  # tight spacing between draft + analysis
-    ).style({"margin": "0", "padding": "0", "width": "100%"})
+        gap=0,
+    )
+    bottom_block_css = bottom_block.style({"margin": "0", "padding": "0", "width": "100%"})
 
-    mo.vstack(
-        [
-            header,
-            story_body,
-            bottom_block,
-        ],
-        gap=0,  # tighter overall spacing
-    ).style(
+
+    page = mo.vstack([header_css, story_body_css, bottom_block_css], gap=0)
+    page_css = page.style(
         {
             "width": "100%",
-            "height": "100vh",   # fill viewport
+            "height": "100vh",
             "display": "flex",
             "flexDirection": "column",
             "margin": "0",
@@ -573,6 +574,9 @@ def _(
             "minHeight": "0",
         }
     )
+
+    page_css
+
     return draft_editor, story_body
 
 
@@ -666,6 +670,17 @@ def _(
 
 
 @app.cell
+def _(story_body):
+    story_body.value
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
 def _(
     append_btn,
     discard_btn,
@@ -689,6 +704,11 @@ def _(
         set_draft_next("")
 
     mo.md("")
+    return
+
+
+@app.cell
+def _():
     return
 
 
