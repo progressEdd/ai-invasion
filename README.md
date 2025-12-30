@@ -1,7 +1,7 @@
 # ai-invasion
 exploring making a local novel ai story writer
 
-![ui](00-supporting-files/images/README/20251230050850.png)
+![ui](00-supporting-files/images/README/20251230052537.png)
 
 ## Demos
 ### Feeling lucky?
