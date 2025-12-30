@@ -4,6 +4,7 @@ __generated_with = "0.18.4"
 app = marimo.App(
     width="columns",
     layout_file="layouts/app.grid.json",
+    css_file="custom.css",    
 )
 
 

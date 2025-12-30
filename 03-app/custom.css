@@ -1,0 +1,11 @@
+/* Firefox forum fix, permanent */
+html, body, div {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+/* let the document expand */
+html, body {
+  height: auto !important;
+}
