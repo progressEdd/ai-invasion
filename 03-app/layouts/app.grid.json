@@ -3,15 +3,15 @@
   "data": {
     "columns": 24,
     "rowHeight": 20,
-    "maxWidth": 1400,
-    "bordered": true,
+    "maxWidth": 1900,
+    "bordered": false,
     "cells": [
       {
         "position": [
           0,
           0,
           2,
-          15
+          12
         ]
       },
       {
@@ -45,7 +45,7 @@
           2,
           2,
           11,
-          13
+          10
         ]
       },
       {
@@ -60,14 +60,11 @@
       {
         "position": [
           0,
-          15,
+          12,
           24,
           66
         ],
         "scrollable": true
-      },
-      {
-        "position": null
       },
       {
         "position": null

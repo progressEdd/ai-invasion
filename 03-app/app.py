@@ -1,7 +1,10 @@
 import marimo
 
 __generated_with = "0.18.4"
-app = marimo.App(width="columns", layout_file="layouts/app.grid.json")
+app = marimo.App(
+    width="columns",
+    layout_file="layouts/app.grid.json",
+)
 
 
 @app.cell
@@ -10,7 +13,7 @@ def _():
 
     llm_backend = mo.ui.radio(
         options=["llamacpp", "lmstudio", "ollama", "openai", "azure"],
-        value="ollama",
+        value="llamacpp",
         label="LLM backend",
     )
 
@@ -408,9 +411,8 @@ def _(get_prompt, mo, set_prompt):
                 gap=12,
             ).style({"width": "100%", "alignItems": "center"}),
         ],
-        gap=8,
+        gap=1.5,
     )
-
     return lucky_btn, start_btn
 
 
@@ -497,12 +499,12 @@ def _(
     set_story_text,
 ):
     premise_md = mo.md(f"**Premise:** {get_premise() or ''}").style(
-        {"margin": "0", "padding": "0", "lineHeight": "1.1"}
+        {"margin": "0", "padding": "0", "lineHeight": "0"}
     )
 
     controls_row = mo.hstack(
         [generate_next_btn, append_btn, discard_btn],
-        gap=8,
+        gap=10,
     ).style(
         {
             "width": "100%",
@@ -511,11 +513,11 @@ def _(
             "alignItems": "center",
             "margin": "0",
             "padding": "0",
-            "marginTop": "-6px",  # pull buttons up (tune -4px .. -10px)
+            "marginTop": "-8px",  # pull buttons up (tune -4px .. -10px)
         }
     )
 
-    header = mo.vstack([premise_md, controls_row], gap=0).style(
+    header = mo.vstack([premise_md, controls_row], gap=1).style(
         {"width": "100%", "margin": "0", "padding": "0"}
     )
 
@@ -523,15 +525,15 @@ def _(
         value=get_story_text(),
         on_change=set_story_text,
         label="Story",
-        rows=20,          # rows becomes less important
+        rows=25,          # rows becomes less important, try to sync up the row to the min height as that will scale the text box to the whitespace to the next element
         full_width=True,
-    ).style({"margin": "0", "padding": "0", "flex": "0.8", "minHeight": "0"})
+    ).style({"margin": "0", "padding": "1", "flex": "1 1 auto", "minHeight": "25"})
 
     draft_editor = mo.ui.text_area(
         value=get_draft_next(),
         on_change=set_draft_next,
         label="Next paragraph (draft)",
-        rows=8,
+        rows=13,
         full_width=True,
     ).style({"margin": "0", "padding": "0"})
 
@@ -570,7 +572,6 @@ def _(
             "minHeight": "0",
         }
     )
-
     return draft_editor, story_body
 
 
@@ -687,11 +688,6 @@ def _(
         set_draft_next("")
 
     mo.md("")
-    return
-
-
-@app.cell
-def _():
     return
 
 
