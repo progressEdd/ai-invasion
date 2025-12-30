@@ -4,12 +4,12 @@ exploring making a local novel ai story writer
 ![ui](00-supporting-files/images/README/20251230012609.png)
 ## Demos
 ### Feeling lucky?
-[feeling-lucky-gemma-2025-12-30_03-49-41.10mb.webm](https://github.com/user-attachments/assets/967cce72-893d-47b9-ae3c-35c158e2c794)
+[Feeling lucky vibe story writing](https://github.com/user-attachments/assets/967cce72-893d-47b9-ae3c-35c158e2c794)
 
 ### Long demos
-[novel-ai-gemma-12b-2025-12-30_04-04-40.10mb.webm](https://github.com/user-attachments/assets/ab2a7194-6592-48be-b9c8-fe2c6bbf9265)
+[Interact with Gemma 3 12b](https://github.com/user-attachments/assets/ab2a7194-6592-48be-b9c8-fe2c6bbf9265)
 
-[novel-ai-ministral-14b-2025-12-30_04-14-14.10mb.webm](https://github.com/user-attachments/assets/cb2af3aa-b1d4-402b-ac10-59f2f9790b53)
+[Interact with Ministral 14b](https://github.com/user-attachments/assets/cb2af3aa-b1d4-402b-ac10-59f2f9790b53)
 
 # Background
 I had chatgpt code up the front end and wrap up the code into structured outputs after seeing the [original thread](https://forum.level1techs.com/t/bedhedds-ai-invasion/235812) for the idea
