@@ -1,7 +1,8 @@
 # ai-invasion
 exploring making a local novel ai story writer
 
-![ui](00-supporting-files/images/README/20251230012609.png)
+![ui](00-supporting-files/images/README/20251230050850.png)
+
 ## Demos
 ### Feeling lucky?
 [Feeling lucky vibe story writing](https://github.com/user-attachments/assets/967cce72-893d-47b9-ae3c-35c158e2c794)
